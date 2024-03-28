@@ -1,0 +1,334 @@
+<?php
+session_start();
+error_reporting(0);
+include('include/dbconnection.php');
+if (strlen($_SESSION['petuid'] == 0)) {
+    header('location:logout.php');
+} else {
+    $uid = $_SESSION['petuid'];
+
+    $firstDayOfMonth = date("Y-m-01");
+    $lastDayOfMonth = date("Y-m-t");
+
+    $query = "SELECT c.categoryname, SUM(e.expensecost) AS totalcost
+              FROM tblcategory AS c
+              LEFT JOIN tblexpense AS e ON c.categoryid = e.categoryid
+              WHERE c.userid = $uid
+              AND e.expensedate BETWEEN '$firstDayOfMonth' AND '$lastDayOfMonth'
+              GROUP BY c.categoryname";
+    $result = mysqli_query($con, $query);
+    $categoryNames = array();
+    $totalExpenses = array();
+    
+    while ($row = mysqli_fetch_assoc($result)) {
+        $categoryNames[] = $row['categoryname'];
+        $totalExpenses[] = $row['totalcost'];
+    }
+
+?>
+
+  
+  <!DOCTYPE html>
+<!--  -->
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <!--<title> Admin Dashboard  </title>-->
+    <link rel="stylesheet" href="css/styleMain.css">
+    <!-- Boxicons CDN Link -->
+    <link href='https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css' rel='stylesheet'>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
+
+
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="chart.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+     
+   </head>
+<body>
+  <div class="sidebar">
+  <div class="logo-details">
+      <i class='bx bx-album'></i>
+      <span class="logo_name">Expense Tracker</span>
+    </div>
+      <ul class="nav-links">
+        <li>
+          <a href="main.php">
+            <i class='bx bx-grid-alt' ></i>
+            <span class="links_name">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="add_expense.php">
+            <i class='bx bx-box' ></i>
+            <span class="links_name">Expenses</span>
+          </a>
+        </li>
+        <li>
+          <a href="add_income.php">
+            <i class='bx bx-box' ></i>
+            <span class="links_name">Income</span>
+          </a>
+        </li>
+        <li>
+          <a href="manage_expense.php">
+            <i class='bx bx-list-ul' ></i>
+            <span class="links_name">Manage Expense</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="report.php">
+          <i class="bx bx-file"></i>
+            <span class="links_name">Report</span>
+          </a>
+        </li>
+                
+        <li>
+          <a href="#"  class="active">
+            <i class='bx bx-pie-chart-alt-2' ></i>
+            <span class="links_name">Analytics</span>
+          </a>
+        </li>
+        <li>
+          <a href="limit.php">
+            <i class='bx bx-list-ul' ></i>
+            <span class="links_name">Set Limit</span>
+          </a>
+        </li>
+        <li>
+          <a href="user_profile.php" >
+            <i class='bx bx-cog' ></i>
+            <span class="links_name">Profile</span>
+          </a>
+        </li>
+      </ul>
+  </div>
+  <section class="home-section">
+<nav>
+    <div class="sidebar-button">
+        <i class='bx bx-menu sidebarBtn'></i>
+        <span class="dashboard">Analytics</span>
+      </div>
+    
+
+      <?php
+$uid=$_SESSION['petuid'];
+$ret=mysqli_query($con,"select username from tbluser where id='$uid'");
+$row=mysqli_fetch_array($ret);
+$name=$row['username'];
+
+?>
+
+      <div class="profile-details">
+  <img src="img/rupee.jpg" alt="">
+  <span class="admin_name"><?php echo $name; ?></span>
+  <i class='bx bx-chevron-down' id='profile-options-toggle'></i>
+  <ul class="profile-options" id='profile-options'>
+    <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</div>
+
+
+<script>
+  const toggleButton = document.getElementById('profile-options-toggle');
+  const profileOptions = document.getElementById('profile-options');
+  
+  toggleButton.addEventListener('click', () => {
+    profileOptions.classList.toggle('show');
+  });
+</script>
+</nav>
+
+<!-- Chart Code -->
+
+<!-- <canvas id="expenseChart" ></canvas>
+
+<script>
+var categoryNames = <?php //echo json_encode($categoryNames); ?>;
+var totalExpenses = <?php //echo json_encode($totalExpenses); ?>;
+</script>
+
+<script>
+var ctx = document.getElementById("expenseChart").getContext("2d");
+
+var chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: categoryNames,
+        datasets: [{
+            label: 'Total Expenses',
+            data: totalExpenses,
+            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false, 
+        scales: {
+            y: {
+                beginAtZero: true,
+                suggestedMax: Math.max(...totalExpenses) + 10
+            }
+        }
+    }
+});
+</script> -->
+<!-- Chart Code -->
+
+<canvas id="expenseChart"></canvas>
+<script>
+    var categoryNames = <?php echo json_encode($categoryNames); ?>;
+    var totalExpenses = <?php echo json_encode($totalExpenses); ?>;
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+
+<script>
+    var ctx = document.getElementById("expenseChart").getContext("2d");
+
+    var chart = new Chart(ctx, {
+        type: 'pie', 
+        data: {
+            labels: categoryNames,
+            datasets: [{
+                label: 'Total Expenses',
+                data: totalExpenses,
+                backgroundColor: [ 
+                    'rgba(255, 99, 132, 0.2)',
+                    'rgba(54, 162, 235, 0.2)',
+                    'rgba(255, 206, 86, 0.2)',
+                    'rgba(75, 192, 192, 0.2)',
+                    'rgba(153, 102, 255, 0.2)',
+                    'rgba(255, 159, 64, 0.2)'
+                ],
+                borderColor: [ 
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+</script>
+
+
+
+
+
+
+<style>
+
+
+.chart-container {
+  position: relative;
+  width: 70%;
+  height: 400px;
+  margin-right: 20px;
+
+  
+}
+
+.chart-legend {
+    position: absolute;
+    top: 224px;
+    right: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.chart-legend-color-box {
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+}
+
+.chart-legend-label {
+  font-size: 12px;
+}
+
+.expense-details {
+  width: 30%;
+}
+
+.expense-details h3 {
+  font-size: 24px;
+  margin-top: 0;
+}
+
+#expense-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#expense-list li {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+#expense-list li span:first-child {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+#total-expense {
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+</style>
+
+
+
+
+
+
+
+
+  <script>
+   let sidebar = document.querySelector(".sidebar");
+let sidebarBtn = document.querySelector(".sidebarBtn");
+sidebarBtn.onclick = function() {
+  sidebar.classList.toggle("active");
+  if(sidebar.classList.contains("active")){
+  sidebarBtn.classList.replace("bx-menu" ,"bx-menu-alt-right");
+}else
+  sidebarBtn.classList.replace("bx-menu-alt-right", "bx-menu");
+}
+ </script>
+
+</body>
+</html>
+
+  <?php }?>
